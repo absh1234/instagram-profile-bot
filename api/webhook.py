@@ -2,6 +2,7 @@ import os
 import re
 import json
 import hmac
+import base64
 import logging
 import requests
 import instaloader
@@ -71,7 +72,29 @@ def extract_username(text):
 
 
 def get_profile_picture(username):
+    session_b64 = os.environ.get("INSTAGRAM_SESSION_B64")
+
+    if not session_b64:
+        raise RuntimeError("INSTAGRAM_SESSION_B64 is not configured")
+
+    session_data = base64.b64decode(session_b64, validate=True)
+
+    session_path = "/tmp/instaloader-session"
+
+    with open(session_path, "wb") as session_file:
+        session_file.write(session_data)
+
     loader = instaloader.Instaloader()
+
+    loader.load_session_from_file(
+        username="aryatrgrn",
+        filename=session_path
+    )
+
+    logged_in_as = loader.test_login()
+
+    if logged_in_as != "aryatrgrn":
+        raise RuntimeError("Instagram session is invalid or expired")
 
     profile = instaloader.Profile.from_username(
         loader.context,
